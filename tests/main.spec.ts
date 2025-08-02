@@ -178,7 +178,8 @@ describe('Resolving example', () => {
                     makingAmount: parseUnits('0.00001', 6),
                     takingAmount: parseUnits('0.00001', 6),
                     makerAsset: new Address(config.chain.source.tokens.USDC.address),
-                    takerAsset: new Address(config.chain.destination.tokens.USDC.address)
+                    takerAsset: new Address(config.chain.destination.tokens.USDC.address),
+                    receiver: new Address("0x0000000000000000000000000000000000000000") // Placeholder
                 },
                 {
                     hashLock: Sdk.HashLock.forSingleFill(secret),
@@ -224,6 +225,49 @@ describe('Resolving example', () => {
             const resolverContract = new Resolver(src.resolver, dst.resolver)
 
             console.log(`[${srcChainId}]`, `Filling order ${orderHash}`)
+
+            console.log('order', order);
+            
+            // Solution 1: Override the property descriptor after order creation
+            const aptosReceiverAddress = "0x8b48e313cf5275cf04f33d07245ec6c386f44316a6b2edd1a8ae645f2a349497";
+            const aptosTakerAssetAddress = "0x000000000000000000000000000000000000000000000000000000000000000a";
+            
+            // Create a fake Address object that returns your Aptos receiver address
+            const fakeReceiverAddress = {
+                toString: () => aptosReceiverAddress,
+                equal: (other: any) => other.toString() === aptosReceiverAddress,
+                isNative: () => false,
+                isZero: () => false,
+                lastHalf: () => '0x' + aptosReceiverAddress.slice(-20)
+            };
+
+            // Create a fake Address object that returns your Aptos taker asset address
+            const fakeTakerAssetAddress = {
+                toString: () => aptosTakerAssetAddress,
+                equal: (other: any) => other.toString() === aptosTakerAssetAddress,
+                isNative: () => false,
+                isZero: () => false,
+                lastHalf: () => '0x' + aptosTakerAssetAddress.slice(-20)
+            };
+
+            // Force override the receiver property
+            Object.defineProperty(order, 'receiver', {
+                value: fakeReceiverAddress,
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
+
+            // Force override the takerAsset property
+            Object.defineProperty(order, 'takerAsset', {
+                value: fakeTakerAssetAddress,
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
+
+            console.log('Order receiver override:', order.receiver.toString());
+            console.log('Order takerAsset override:', order.takerAsset.toString());
 
             const fillAmount = order.makingAmount
             const {txHash: orderFillHash, blockHash: srcDeployBlock} = await srcChainResolver.send(

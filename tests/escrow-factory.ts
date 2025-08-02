@@ -69,8 +69,21 @@ export class EscrowFactory {
                     const immutables = data.at(0)
                     const complement = data.at(1)
                     
-                    console.log(`Successfully parsed event logs on attempt ${i + 1}`)
-                    
+
+// CORRECT - Work directly with the BigInt:
+console.log(`Successfully parsed event logs on attempt ${i + 1}`);
+const rawUint256 = complement[0]; // This is the raw BigInt from the event
+console.log("Raw uint256 value:", rawUint256.toString());
+console.log("Raw uint256 hex:", rawUint256.toString(16));
+
+// Convert directly to full 32-byte hex string
+const aptosFormattedAddress = "0x" + rawUint256.toString(16).padStart(64, '0');
+console.log("aptosFormattedAddress is:", aptosFormattedAddress);
+
+// Verify it matches your original
+const originalAptos = "0x8b48e313cf5275cf04f33d07245ec6c386f44316a6b2edd1a8ae645f2a349497";
+console.log("Original address:", originalAptos);
+console.log("Recovery successful:", aptosFormattedAddress.toLowerCase() === originalAptos.toLowerCase());
                     return [
                         Sdk.Immutables.new({
                             orderHash: immutables[0],
@@ -88,6 +101,7 @@ export class EscrowFactory {
                             token: Sdk.Address.fromBigInt(complement[2]),
                             safetyDeposit: complement[3]
                         })
+
                     ]
                 }
             } catch (error) {
@@ -104,4 +118,5 @@ export class EscrowFactory {
         
         throw new Error(`Failed to get SrcEscrowCreated event logs after 5 attempts for block ${blockHash}`)
     }
+
 }
