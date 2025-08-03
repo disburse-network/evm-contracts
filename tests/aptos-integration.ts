@@ -1,4 +1,4 @@
-import { Aptos, AptosConfig, Network, Ed25519PrivateKey, Account } from "@aptos-labs/ts-sdk";
+import { Aptos, AptosConfig, Network, Ed25519PrivateKey, Account, PrivateKey, PrivateKeyVariants } from "@aptos-labs/ts-sdk";
 import { FusionPlusClient } from "./fusion-plus-client";
 import { keccak256 } from 'ethers';
 import crypto from 'crypto';
@@ -37,7 +37,8 @@ export class AptosIntegration {
     this.fusionClient = new FusionPlusClient(this.aptos, contractAddress);
     
     // Create resolver account from private key
-    const resolverPrivateKeyObj = new Ed25519PrivateKey(resolverPrivateKey);
+    const formattedPrivateKey = PrivateKey.formatPrivateKey(resolverPrivateKey, PrivateKeyVariants.Ed25519);
+    const resolverPrivateKeyObj = new Ed25519PrivateKey(formattedPrivateKey);
     this.resolverAccount = Account.fromPrivateKey({ privateKey: resolverPrivateKeyObj });
   }
 
