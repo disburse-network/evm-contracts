@@ -34,22 +34,8 @@ export const config = {
                     donor: '0x7f90122bf0700f9e7e1f688fe926940e8839f353' // USDC whale on Optimism
                 }
             }
-        },
-        destination: {
-            chainId: Sdk.NetworkEnum.BINANCE,
-            url: fromEnv.DST_CHAIN_RPC,
-            createFork: fromEnv.DST_CHAIN_CREATE_FORK,
-            limitOrderProtocol: '0x111111125421ca6dc452d289314280a0f8842a65',
-            wrappedNative: '0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c',
-            ownerPrivateKey: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
-            tokens: {
-                USDC: {
-                    address: '0x8965349fb649a33a30cbfda057d8ec2c48abe2a2',
-                    donor: '0x4188663a85C92EEa35b5AD3AA5cA7CeB237C6fe9'
-                }
-            }
         }
     }
 } as const
 
-export type ChainConfig = (typeof config.chain)['source' | 'destination']
+export type ChainConfig = (typeof config.chain)['source']

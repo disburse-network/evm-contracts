@@ -22,16 +22,6 @@ export class EscrowFactory {
         )
     }
 
-    public async getDestinationImpl(): Promise<Sdk.Address> {
-        return Sdk.Address.fromBigInt(
-            BigInt(
-                await this.provider.call({
-                    to: this.address,
-                    data: id('ESCROW_DST_IMPLEMENTATION()').slice(0, 10)
-                })
-            )
-        )
-    }
 
     public async getSrcDeployEvent(blockHash: string): Promise<[Sdk.Immutables, Sdk.DstImmutablesComplement]> {
         const event = this.iface.getEvent('SrcEscrowCreated')!

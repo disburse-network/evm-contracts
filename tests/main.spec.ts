@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import {expect, jest} from '@jest/globals'
+import {expect, jest, describe, it, beforeAll, afterAll} from '@jest/globals'
 
 import {createServer, CreateServerReturnType} from 'prool'
 import {anvil} from 'prool/instances'
@@ -29,7 +29,7 @@ const {Address} = Sdk
 
 jest.setTimeout(1000 * 60)
 
-const userPkDestinationChain = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+const userPkDestinationChain = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d'
 const resolverPkDestinationChain = '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a'
 
 // Use private keys from config for real transactions
@@ -40,7 +40,7 @@ const resolverPkForDestinationChain = resolverPkDestinationChain
 // eslint-disable-next-line max-lines-per-function
 describe('Resolving example', () => {
     const srcChainId = config.chain.source.chainId
-    const dstChainId = config.chain.destination.chainId
+    const dstChainId = Sdk.NetworkEnum.ETHEREUM // APTOS and ethereum has the same chainId
 
     type Chain = {
         node?: CreateServerReturnType | undefined
@@ -63,33 +63,19 @@ describe('Resolving example', () => {
     let srcResolverContract: Wallet
     let dstResolverContract: Wallet
 
-    let SOURCE_CHAIN_ID = config.chain.source.chainId
-    let DESTINATION_CHAIN_ID = config.chain.destination.chainId
-
     let srcTimestamp: bigint
 
     async function increaseTime(t: number): Promise<void> {
-        await new Promise(resolve => setTimeout(resolve, t * 1000))
+        await new Promise((resolve) => setTimeout(resolve, t * 1000))
     }
 
     beforeAll(async () => {
-        ;[src, dst] = await Promise.all([initChain(config.chain.source), initChain(config.chain.destination)])
+        ;[src] = await Promise.all([initChain(config.chain.source)])
 
         srcChainUser = new Wallet(userPkSourceChain, src.provider)
-        dstChainUser = new Wallet(userPkDestinationChain, dst.provider)
         srcChainResolver = new Wallet(resolverPkForSourceChain, src.provider)
-        dstChainResolver = new Wallet(resolverPkForDestinationChain, dst.provider)
 
         srcFactory = new EscrowFactory(src.provider, src.escrowFactory)
-        dstFactory = new EscrowFactory(dst.provider, dst.escrowFactory)
-
-        // we dont need donot as we are doing real transactions
-        // // get 1000 USDC for user in SRC chain and approve to LOP
-        // await srcChainUser.topUpFromDonor(
-        //     config.chain.source.tokens.USDC.address,
-        //     config.chain.source.tokens.USDC.donor,
-        //     parseUnits('1000', 6)
-        // )
 
         // we need to approve the token to the limit order protocol
         await srcChainUser.approveToken(
@@ -98,92 +84,42 @@ describe('Resolving example', () => {
             MaxUint256
         )
 
-        // get 0.001 USDC for resolver in DST chain
-        // For real transactions, use private keys instead of impersonation
-        if (src.createFork) {
-            srcResolverContract = await Wallet.fromAddress(src.resolver, src.provider, SOURCE_CHAIN_ID)
-        } else {
-            // Use actual private key for real transactions
-            console.log(" Am i here ? :", src.createFork)
-            srcResolverContract =  new Wallet(resolverPkForSourceChain, src.provider)
-        }
-        
-        if (dst.createFork) {
-            dstResolverContract = await Wallet.fromAddress(dst.resolver, dst.provider, DESTINATION_CHAIN_ID)
-        } else {
-            // Use actual private key for real transactions
-            dstResolverContract = new Wallet(resolverPkForDestinationChain, dst.provider)
-        }
-        
-        // For real transactions, we can't use donor funding
-        if (dst.createFork) {
-            await dstResolverContract.topUpFromDonor(
-                config.chain.destination.tokens.USDC.address,
-                config.chain.destination.tokens.USDC.donor,
-                parseUnits('2000', 6),
-                DESTINATION_CHAIN_ID
-            )
-        } else {
-            // For real transactions, the resolver wallet should already have USDC
-            console.log(`[${dstChainId}]`, `Using existing USDC balance for resolver on BSC`)
-        }
-        // top up contract for approve (reduced for real transactions)
-        if (dst.createFork) {
-            await dstChainResolver.transfer(dst.resolver, parseEther('1'))
-        } else {
-            // For real transactions, use minimal amount
-            await dstChainResolver.transfer(dst.resolver, parseEther('0.001'))
-        }
-        await dstResolverContract.unlimitedApprove(config.chain.destination.tokens.USDC.address, dst.escrowFactory)
-
+        srcResolverContract = new Wallet(resolverPkForSourceChain, src.provider)
         srcTimestamp = BigInt((await src.provider.getBlock('latest'))!.timestamp)
     })
 
-    async function getBalances(
-        srcToken: string,
-        dstToken: string
-    ): Promise<{src: {user: bigint; resolver: bigint}; dst: {user: bigint; resolver: bigint}}> {
+    async function getBalance(srcToken: string): Promise<{user: bigint; resolver: bigint}> {
         return {
-            src: {
-                user: await srcChainUser.tokenBalance(srcToken),
-                resolver: await srcResolverContract.tokenBalance(srcToken)
-            },
-            dst: {
-                user: await dstChainUser.tokenBalance(dstToken),
-                resolver: await dstResolverContract.tokenBalance(dstToken)
-            }
+            user: await srcChainUser.tokenBalance(srcToken),
+            resolver: await srcResolverContract.tokenBalance(srcToken)
         }
     }
 
     afterAll(async () => {
         src.provider.destroy()
-        dst.provider.destroy()
-        await Promise.all([src.node?.stop(), dst.node?.stop()])
+        await Promise.all([src.node?.stop()])
     })
 
     // eslint-disable-next-line max-lines-per-function
     describe('Fill', () => {
         it('should swap Ethereum USDC -> Bsc USDC. Single fill only', async () => {
-            const initialBalances = await getBalances(
-                config.chain.source.tokens.USDC.address,
-                config.chain.destination.tokens.USDC.address
-            )
+            const initialBalances = await getBalance(config.chain.source.tokens.USDC.address)
 
             // User creates order
             const secret = uint8ArrayToHex(randomBytes(32)) // note: use crypto secure random number in real world
-            
-            // Create SHA1 hashes of the Aptos addresses for EVM compatibility
-            const aptosReceiverAddress = "0x8b48e313cf5275cf04f33d07245ec6c386f44316a6b2edd1a8ae645f2a349497";
-            const aptosTakerAssetAddress = "0x000000000000000000000000000000000000000000000000000000000000000a";
 
-            const receiverSha1 = '0x' + crypto.createHash('sha1').update(aptosReceiverAddress).digest('hex');
-            const takerAssetSha1 = '0x' + crypto.createHash('sha1').update(aptosTakerAssetAddress).digest('hex');
-            
-            console.log('Original Aptos receiver address:', aptosReceiverAddress);
-            console.log('Receiver SHA1 hash:', receiverSha1);
-            console.log('Original Aptos taker asset address:', aptosTakerAssetAddress);
-            console.log('Taker asset SHA1 hash:', takerAssetSha1);
-            
+            // Create SHA1 hashes of the Aptos addresses for EVM compatibility
+            const aptosReceiverAddress = '0x8b48e313cf5275cf04f33d07245ec6c386f44316a6b2edd1a8ae645f2a349497'
+            const aptosTakerAssetAddress = '0x000000000000000000000000000000000000000000000000000000000000000a'
+
+            const receiverSha1 = '0x' + crypto.createHash('sha1').update(aptosReceiverAddress).digest('hex')
+            const takerAssetSha1 = '0x' + crypto.createHash('sha1').update(aptosTakerAssetAddress).digest('hex')
+
+            console.log('Original Aptos receiver address:', aptosReceiverAddress)
+            console.log('Receiver SHA1 hash:', receiverSha1)
+            console.log('Original Aptos taker asset address:', aptosTakerAssetAddress)
+            console.log('Taker asset SHA1 hash:', takerAssetSha1)
+
             const order = Sdk.CrossChainOrder.new(
                 new Address(src.escrowFactory),
                 {
@@ -208,7 +144,7 @@ describe('Resolving example', () => {
                     }),
                     srcChainId,
                     dstChainId,
-                    srcSafetyDeposit: parseEther('0.000000001'),// lowering down the eth safe deposit for tests
+                    srcSafetyDeposit: parseEther('0.000000001'), // lowering down the eth safe deposit for tests
                     dstSafetyDeposit: parseEther('0.000000001')
                 },
                 {
@@ -236,13 +172,13 @@ describe('Resolving example', () => {
             const signature = await srcChainUser.signOrder(srcChainId, order)
             const orderHash = order.getOrderHash(srcChainId)
             // Resolver fills order
-            const resolverContract = new Resolver(src.resolver, dst.resolver)
+            const resolverContract = new Resolver(src.resolver)
 
             console.log(`[${srcChainId}]`, `Filling order ${orderHash}`)
 
-            console.log('order', order);
-            console.log('Order receiver SHA1 address:', order.receiver.toString());
-            console.log('Order takerAsset SHA1 address:', order.takerAsset.toString());
+            console.log('order', order)
+            console.log('Order receiver SHA1 address:', order.receiver.toString())
+            console.log('Order takerAsset SHA1 address:', order.takerAsset.toString())
 
             const fillAmount = order.makingAmount
             const {txHash: orderFillHash, blockHash: srcDeployBlock} = await srcChainResolver.send(
@@ -262,38 +198,15 @@ describe('Resolving example', () => {
 
             const srcEscrowEvent = await srcFactory.getSrcDeployEvent(srcDeployBlock)
 
-            const dstImmutables = srcEscrowEvent[0]
-                .withComplement(srcEscrowEvent[1])
-                .withTaker(new Address(resolverContract.dstAddress))
-
-            console.log(`[${dstChainId}]`, `Depositing ${dstImmutables.amount} for order ${orderHash}`)
-            const {txHash: dstDepositHash, blockTimestamp: dstDeployedAt} = await dstChainResolver.send(
-                resolverContract.deployDst(dstImmutables)
-            )
-            console.log(`[${dstChainId}]`, `Created dst deposit for order ${orderHash} in tx ${dstDepositHash}`)
-
             const ESCROW_SRC_IMPLEMENTATION = await srcFactory.getSourceImpl()
-            const ESCROW_DST_IMPLEMENTATION = await dstFactory.getDestinationImpl()
 
             const srcEscrowAddress = new Sdk.EscrowFactory(new Address(src.escrowFactory)).getSrcEscrowAddress(
                 srcEscrowEvent[0],
                 ESCROW_SRC_IMPLEMENTATION
             )
 
-            const dstEscrowAddress = new Sdk.EscrowFactory(new Address(dst.escrowFactory)).getDstEscrowAddress(
-                srcEscrowEvent[0],
-                srcEscrowEvent[1],
-                dstDeployedAt,
-                new Address(resolverContract.dstAddress),
-                ESCROW_DST_IMPLEMENTATION
-            )
-
             await increaseTime(11)
             // User shares key after validation of dst escrow deployment
-            console.log(`[${dstChainId}]`, `Withdrawing funds for user from ${dstEscrowAddress}`)
-            await dstChainResolver.send(
-                resolverContract.withdraw('dst', dstEscrowAddress, secret, dstImmutables.withDeployedAt(dstDeployedAt))
-            )
 
             console.log(`[${srcChainId}]`, `Withdrawing funds for resolver from ${srcEscrowAddress}`)
             const {txHash: resolverWithdrawHash} = await srcChainResolver.send(
@@ -303,19 +216,19 @@ describe('Resolving example', () => {
                 `[${srcChainId}]`,
                 `Withdrew funds for resolver from ${srcEscrowAddress} to ${src.resolver} in tx ${resolverWithdrawHash}`
             )
-
-            const resultBalances = await getBalances(
-                config.chain.source.tokens.USDC.address,
-                config.chain.destination.tokens.USDC.address
-            )
         })
     })
 })
 
 async function initChain(
     cnf: ChainConfig
-): Promise<{node?: CreateServerReturnType; provider: JsonRpcProvider; escrowFactory: string; resolver: string; createFork: boolean}> {
-
+): Promise<{
+    node?: CreateServerReturnType
+    provider: JsonRpcProvider
+    escrowFactory: string
+    resolver: string
+    createFork: boolean
+}> {
     const {node, provider} = await getProvider(cnf)
     const deployer = new SignerWallet(cnf.ownerPrivateKey, provider)
 
@@ -338,11 +251,16 @@ async function initChain(
         provider,
         deployer
     )
-    console.log(`Escrow factory contract deployed to`, escrowFactory, ' at chain ', cnf.chainId==Sdk.NetworkEnum.OPTIMISM ? 'Optimism' : 'BSC')
-    let resolverPk = ""
-    if(cnf.chainId === Sdk.NetworkEnum.OPTIMISM){
+    console.log(
+        `Escrow factory contract deployed to`,
+        escrowFactory,
+        ' at chain ',
+        cnf.chainId == Sdk.NetworkEnum.OPTIMISM ? 'Optimism' : 'BSC'
+    )
+    let resolverPk = ''
+    if (cnf.chainId === Sdk.NetworkEnum.OPTIMISM) {
         resolverPk = resolverPkForSourceChain
-    }else{
+    } else {
         resolverPk = resolverPkDestinationChain
     }
     // deploy Resolver contract
@@ -356,7 +274,12 @@ async function initChain(
         provider,
         deployer
     )
-    console.log(`Resolver contract deployed to`, resolver, ' at chain ', cnf.chainId==Sdk.NetworkEnum.OPTIMISM ? 'Optimism' : 'BSC')
+    console.log(
+        `Resolver contract deployed to`,
+        resolver,
+        ' at chain ',
+        cnf.chainId == Sdk.NetworkEnum.OPTIMISM ? 'Optimism' : 'BSC'
+    )
 
     return {node: node, provider, resolver, escrowFactory, createFork: cnf.createFork}
 }

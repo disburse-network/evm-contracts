@@ -31,46 +31,8 @@ export class Wallet {
         return tokenContract.balanceOf(await this.getAddress())
     }
 
-    async topUpFromDonor(token: string, donor: string, amount: bigint, chainId: number): Promise<void> {
-        const donorWallet = await Wallet.fromAddress(donor, this.provider, chainId)
-        await donorWallet.transferToken(token, await this.getAddress(), amount)
-    }
-
     public async getAddress(): Promise<string> {
         return this.signer.getAddress()
-    }
-
-    public async unlimitedApprove(tokenAddress: string, spender: string): Promise<void> {
-        const currentApprove = await this.getAllowance(tokenAddress, spender)
-
-        // for usdt like tokens
-        if (currentApprove !== 0n) {
-            await this.approveToken(tokenAddress, spender, 0n)
-        }
-
-        await this.approveToken(tokenAddress, spender, (1n << 256n) - 1n)
-    }
-
-    public async getAllowance(token: string, spender: string): Promise<bigint> {
-        const contract = new Contract(token.toString(), ERC20.abi, this.provider)
-
-        return contract.allowance(await this.getAddress(), spender.toString())
-    }
-
-    public async transfer(dest: string, amount: bigint): Promise<void> {
-        await this.signer.sendTransaction({
-            to: dest,
-            value: amount
-        })
-    }
-
-    public async transferToken(token: string, dest: string, amount: bigint): Promise<void> {
-        const tx = await this.signer.sendTransaction({
-            to: token.toString(),
-            data: '0xa9059cbb' + coder.encode(['address', 'uint256'], [dest.toString(), amount]).slice(2)
-        })
-
-        await tx.wait()
     }
 
     public async approveToken(token: string, spender: string, amount: bigint): Promise<void> {

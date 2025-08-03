@@ -5,7 +5,8 @@
   "scripts": {
     "test": "forge build && node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "test:optimism": "./scripts/setup-optimism.sh",
-    "lint": "eslint  \"tests/**/*.ts\""
+    "lint": "eslint  \"tests/**/*.ts\"",
+    "integration-demo": "tsx src/aptos-evm-integration.ts"
   },
   "devDependencies": {
     "@1inch/eslint-config": "^v3.0.7",
@@ -17,6 +18,7 @@
     "@swc/core": "1.5.25",
     "@swc/jest": "0.2.36",
     "@types/jest": "29.5.12",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^22.16.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
