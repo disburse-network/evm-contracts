@@ -1,0 +1,175 @@
+[
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "useraddress",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "Address",
+				"name": "useraddress",
+				"type": "uint256"
+			}
+		],
+		"name": "getAddress",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "pure",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "secret",
+				"type": "bytes32"
+			},
+			{
+				"components": [
+					{
+						"internalType": "bytes32",
+						"name": "orderHash",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "hashlock",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "Address",
+						"name": "maker",
+						"type": "uint256"
+					},
+					{
+						"internalType": "Address",
+						"name": "taker",
+						"type": "uint256"
+					},
+					{
+						"internalType": "Address",
+						"name": "token",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "safetyDeposit",
+						"type": "uint256"
+					},
+					{
+						"internalType": "Timelocks",
+						"name": "timelocks",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bytes",
+						"name": "parameters",
+						"type": "bytes"
+					}
+				],
+				"internalType": "struct test.Immutables",
+				"name": "immutables",
+				"type": "tuple"
+			}
+		],
+		"name": "publicWithdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "value",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bytes32",
+				"name": "secret",
+				"type": "bytes32"
+			},
+			{
+				"components": [
+					{
+						"internalType": "bytes32",
+						"name": "orderHash",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "hashlock",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "Address",
+						"name": "maker",
+						"type": "uint256"
+					},
+					{
+						"internalType": "Address",
+						"name": "taker",
+						"type": "uint256"
+					},
+					{
+						"internalType": "Address",
+						"name": "token",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "safetyDeposit",
+						"type": "uint256"
+					},
+					{
+						"internalType": "Timelocks",
+						"name": "timelocks",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bytes",
+						"name": "parameters",
+						"type": "bytes"
+					}
+				],
+				"internalType": "struct test.Immutables",
+				"name": "immutables",
+				"type": "tuple"
+			}
+		],
+		"name": "withdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
+]
