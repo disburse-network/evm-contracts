@@ -12,7 +12,7 @@ This project implements a complete cross-chain atomic swap system that enables s
 - **Hash-Based Address Verification**: Handles non-EVM address formats (NEAR, Stellar, etc.)
 - **1inch Fusion Integration**: Leverages 1inch's limit order protocol for order management
 - **Atomic Execution**: Ensures either both sides complete or neither does
-- **Dutch Auction Mechanism**: Dynamic pricing with time decay
+- **Decay-Based Dutch Auctions**: Dynamic pricing with time decay for optimal market rates
 - **Multi-Chain Support**: Extensible architecture for additional chains
 
 ## 🔄 Swap Flow
@@ -60,6 +60,19 @@ We have implemented hash-based verification for addresses on chains that have ad
 To solve this, the user signs the hash of the receiving address and provides the signed order to the relayer along with extra data containing the actual address. When broadcasting the intent from the relayer to the resolver, the resolver detects that the chain ID corresponds to a non-EVM chain and accepts the address provided by the relayer. It then verifies the relayed address by taking its hash and comparing it to the hash emitted on-chain.
 
 This approach allows us to support multiple address formats from EVM itself, which is a major unlock for chains like NEAR and Stellar.
+
+## 🎯 Decay-Based Dutch Auctions
+
+Apart from this, we have also implemented decay-based Dutch auctions, which allow resolvers to pick orders at their preferred market rate, while giving users the ability to set the minimum price they are willing to accept.
+
+For example, if a user wants to swap 1 APTOS for 100 USDC, they can set:
+- **Initial amount**: 102 USDC
+- **Decay per second**: 0.2 USDC
+- **Minimum acceptable amount**: 98 USDC
+
+This means the resolver can accept the order at any time within the next 20 seconds. If the resolver accepts after 10 seconds, the user would receive exactly 100 USDC on the destination chain.
+
+We have also preserved the hash lock and time lock properties from our Non-EVM contracts, ensuring security and decentralization.
 
 ### Implementation Details
 
@@ -189,10 +202,13 @@ evm-contracts/
 - Destination escrow holds resolver's tokens
 - Atomic withdrawal ensures fairness
 
-**Dutch Auction Mechanism**: Dynamic pricing prevents front-running:
-- Time-based price decay
-- Incentivizes early execution
-- Reduces MEV opportunities
+**Decay-Based Dutch Auctions**: Our innovative pricing mechanism allows resolvers to pick orders at their preferred market rate while giving users control over minimum acceptable prices:
+
+- **Initial Amount**: User sets starting price (e.g., 102 USDC for 1 APT)
+- **Decay Per Second**: Continuous price reduction (e.g., 0.2 USDC/second)
+- **Minimum Amount**: User's floor price (e.g., 98 USDC minimum)
+- **Time Window**: Resolver can accept anytime within the decay period
+- **Fair Pricing**: Resolver gets optimal rate, user gets guaranteed minimum
 
 ### Integration Benefits
 
