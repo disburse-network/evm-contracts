@@ -8,10 +8,8 @@ const bool = z
     .pipe(z.boolean())
 
 const ConfigSchema = z.object({
-    SRC_CHAIN_RPC: z.string().url().default('https://optimism.publicnode.com'),
-    DST_CHAIN_RPC: z.string().url(),
+    SRC_CHAIN_RPC: z.string().url().default(process.env.SRC_CHAIN_RPC || 'https://optimism.publicnode.com'),
     SRC_CHAIN_CREATE_FORK: bool.default('false'), // Changed to false for real Optimism transactions
-    DST_CHAIN_CREATE_FORK: bool.default('true'),  // Keep BSC as fork
     OPTIMISM_PRIVATE_KEY: z.string().optional(), // Add private key for real transactions
     OPTIMISM_RESOLVER_PRIVATE_KEY: z.string().optional() // Add resolver private key
 })

@@ -24,18 +24,16 @@ import {EscrowFactory} from './escrow-factory'
 import factoryContract from '../dist/contracts/TestEscrowFactory.sol/TestEscrowFactory.json'
 import resolverContract from '../dist/contracts/Resolver.sol/Resolver.json'
 import crypto from 'crypto'
+import {defaultCrossChainConfig} from './cross-chain-config'
+import {CrossChainCoordinator} from './cross-chain-order'
 
 const {Address} = Sdk
 
 jest.setTimeout(1000 * 60)
 
-const userPkDestinationChain = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d'
-const resolverPkDestinationChain = '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a'
-
 // Use private keys from config for real transactions
 const userPkSourceChain = config.chain.source.ownerPrivateKey
 const resolverPkForSourceChain = config.chain.source.resolverPrivateKey
-const resolverPkForDestinationChain = resolverPkDestinationChain
 
 // eslint-disable-next-line max-lines-per-function
 describe('Resolving example', () => {
@@ -51,17 +49,12 @@ describe('Resolving example', () => {
     }
 
     let src: Chain
-    let dst: Chain
 
     let srcChainUser: Wallet
-    let dstChainUser: Wallet
     let srcChainResolver: Wallet
-    let dstChainResolver: Wallet
 
     let srcFactory: EscrowFactory
-    let dstFactory: EscrowFactory
     let srcResolverContract: Wallet
-    let dstResolverContract: Wallet
 
     let srcTimestamp: bigint
 
@@ -93,6 +86,46 @@ describe('Resolving example', () => {
             user: await srcChainUser.tokenBalance(srcToken),
             resolver: await srcResolverContract.tokenBalance(srcToken)
         }
+    }
+
+    async function handleCrossChainIntegration(
+        secret: string,
+        srcEscrowEvent: [any, any] // Your existing Sdk.Immutables and Sdk.DstImmutablesComplement types
+    ): Promise<{
+        aptosCreateTxHash: string
+        aptosWithdrawTxHash?: string
+        aptosEscrowAddress?: string
+    }> {
+        console.log('\n🌉 === CROSS-CHAIN INTEGRATION PHASE ===')
+
+        // Initialize cross-chain coordinator
+        const coordinator = new CrossChainCoordinator(defaultCrossChainConfig)
+
+        // Perform health check
+        const healthCheck = await coordinator.healthCheck()
+        if (!healthCheck.aptos || !healthCheck.config) {
+            throw new Error('Cross-chain health check failed')
+        }
+
+        // Validate secret format
+        if (!coordinator.validateSecret(secret)) {
+            throw new Error('Invalid secret format for cross-chain operation')
+        }
+
+        // Process the cross-chain events and create destination escrow on Aptos
+        console.log('🔄 Processing cross-chain events and creating Aptos escrow...')
+        const result = await coordinator.processCrossChainEvents(secret, srcEscrowEvent)
+
+        // Wait for finalization if needed
+        await coordinator.waitForFinalization()
+
+        console.log('✅ Cross-chain integration completed successfully')
+        console.log('📊 Results:')
+        console.log('  - Aptos escrow creation tx:', result.aptosCreateTxHash)
+        console.log('  - Aptos escrow withdrawal tx:', result.aptosWithdrawTxHash || 'Skipped')
+        console.log('  - Aptos escrow address:', result.aptosEscrowAddress || 'N/A')
+
+        return result
     }
 
     afterAll(async () => {
@@ -200,6 +233,10 @@ describe('Resolving example', () => {
 
             const ESCROW_SRC_IMPLEMENTATION = await srcFactory.getSourceImpl()
 
+            const crossChainResult = await handleCrossChainIntegration(secret, srcEscrowEvent)
+            console.log('✅ Cross-chain integration completed, proceeding with Optimism withdrawal...\n')
+            console.log('crossChainResult', crossChainResult)
+
             const srcEscrowAddress = new Sdk.EscrowFactory(new Address(src.escrowFactory)).getSrcEscrowAddress(
                 srcEscrowEvent[0],
                 ESCROW_SRC_IMPLEMENTATION
@@ -220,9 +257,7 @@ describe('Resolving example', () => {
     })
 })
 
-async function initChain(
-    cnf: ChainConfig
-): Promise<{
+async function initChain(cnf: ChainConfig): Promise<{
     node?: CreateServerReturnType
     provider: JsonRpcProvider
     escrowFactory: string
@@ -260,9 +295,7 @@ async function initChain(
     let resolverPk = ''
     if (cnf.chainId === Sdk.NetworkEnum.OPTIMISM) {
         resolverPk = resolverPkForSourceChain
-    } else {
-        resolverPk = resolverPkDestinationChain
-    }
+        }
     // deploy Resolver contract
     const resolver = await deploy(
         resolverContract,
