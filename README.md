@@ -9,7 +9,7 @@ This project implements a complete cross-chain atomic swap system that enables s
 ### Key Features
 
 - **Bidirectional Swaps**: Support for both Aptos → Optimism and Optimism → Aptos swaps
-- **Hash-Based Address Verification**: Handles non-EVM address formats (NEAR, Stellar, etc.)
+- **Hash-Based Address Verification**: Handles non-EVM address formats (Aptos, Sui, NEAR, Stellar, etc.)
 - **1inch Fusion Integration**: Leverages 1inch's limit order protocol for order management
 - **Atomic Execution**: Ensures either both sides complete or neither does
 - **Decay-Based Dutch Auctions**: Dynamic pricing with time decay for optimal market rates
