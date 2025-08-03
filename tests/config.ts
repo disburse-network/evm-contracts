@@ -19,7 +19,7 @@ const fromEnv = ConfigSchema.parse(process.env)
 export const config = {
     chain: {
         source: {
-            chainId: Sdk.NetworkEnum.OPTIMISM, // Changed to Optimism
+            chainId: 10, // Changed to Optimism
             url: fromEnv.SRC_CHAIN_RPC,
             createFork: fromEnv.SRC_CHAIN_CREATE_FORK,
             limitOrderProtocol: '0x111111125421ca6dc452d289314280a0f8842a65',

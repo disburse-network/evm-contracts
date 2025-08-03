@@ -109,7 +109,7 @@ export class EscrowFactory {
                         })
                     ]
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.log(`Attempt ${i + 1} failed:`, error.message)
             }
 

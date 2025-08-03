@@ -210,7 +210,7 @@ export class AptosIntegration {
       const txnResponse = await fetch(`${fullnodeUrl}/v1/transactions/by_hash/${transactionHash}`);
       
       if (txnResponse.ok) {
-        const txn = await txnResponse.json();
+        const txn = await txnResponse.json() as { events?: any[] };
         console.log(`📡 Found transaction with ${txn.events?.length || 0} events`);
         
         if (txn.events) {

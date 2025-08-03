@@ -15,7 +15,9 @@ export default {
     },
     extensionsToTreatAsEsm: ['.ts', '.tsx'],
     transformIgnorePatterns: [
-        // "/node_modules/",
-        // "\\.pnp\\.[^\\/]+$",
-    ]
+        "node_modules/(?!(prool|@1inch|@aptos-labs|@ethersproject)/)"
+    ],
+    moduleNameMapper: {
+        '^(\\.{1,2}/.*)\\.js$': '$1'
+    }
 }
