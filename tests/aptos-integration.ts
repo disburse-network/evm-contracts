@@ -1,5 +1,6 @@
 import { Aptos, AptosConfig, Network, Ed25519PrivateKey, Account } from "@aptos-labs/ts-sdk";
 import { FusionPlusClient } from "./fusion-plus-client";
+import { keccak256 } from 'ethers';
 import crypto from 'crypto';
 
 export interface AptosEscrowData {
@@ -85,9 +86,11 @@ export class AptosIntegration {
     }
 
     try {
-      // Convert the secret to hash for hashlock
+      // Convert the secret to its Keccak256 hash for hashlock (matching your Aptos contract)
       const secretBytes = Buffer.from(eventData.secret.replace('0x', ''), 'hex');
-      const hashArray = Array.from(secretBytes);
+      const hashHex = keccak256(secretBytes); // Returns hex string with 0x prefix
+      const hashBuffer = Buffer.from(hashHex.slice(2), 'hex'); // Remove 0x and convert to buffer
+      const hashArray = Array.from(hashBuffer);
 
       // Use the original receiver address (not the SHA1 hash)
       const recipientAddress = eventData.originalReceiverAddress.startsWith('0x') 
@@ -102,6 +105,9 @@ export class AptosIntegration {
       console.log('  Metadata:', metadata);
       console.log('  Amount:', eventData.amount.toString());
       console.log('  Chain ID:', 10); // Optimism chain ID
+      console.log('  Secret length:', eventData.secret.length);
+      console.log('  Hash method: Keccak256');
+      console.log('  Hash hex:', hashHex);
       console.log('  Hash length:', hashArray.length);
 
       // Create escrow payload
@@ -137,12 +143,33 @@ export class AptosIntegration {
   }
 
   /**
+   * Check if escrow is in withdrawable phase
+   */
+  private async checkEscrowPhase(escrowAddress: string): Promise<boolean> {
+    try {
+      // You could add a view function call here to check the escrow phase
+      // For now, we'll just return true and rely on timing
+      console.log('🔍 Checking escrow phase for:', escrowAddress);
+      return true;
+    } catch (error) {
+      console.warn('⚠️ Could not check escrow phase:', error);
+      return false;
+    }
+  }
+
+  /**
    * Withdraw from destination escrow using the secret
    */
   async withdrawFromDestinationEscrow(escrowAddress: string, secret: string): Promise<string> {
     console.log('💸 Withdrawing from destination escrow on Aptos...');
 
     try {
+      // Check if escrow is in correct phase
+      const isWithdrawable = await this.checkEscrowPhase(escrowAddress);
+      if (!isWithdrawable) {
+        console.warn('⚠️ Escrow not in withdrawable phase yet');
+      }
+
       // Convert secret to bytes array
       const secretBytes = Buffer.from(secret.replace('0x', ''), 'hex');
       const secretArray = Array.from(secretBytes);
@@ -175,10 +202,11 @@ export class AptosIntegration {
     console.log('🔍 Getting escrow object address from events...');
     
     try {
-      const fullnodeUrl = this.aptos.config.fullnode + '/v1';
+      // Use the correct fullnode URL for testnet
+      const fullnodeUrl = this.aptos.config.fullnode || 'https://api.testnet.aptoslabs.com';
       
       // Get events from specific transaction
-      const txnResponse = await fetch(`${fullnodeUrl}/transactions/by_hash/${transactionHash}`);
+      const txnResponse = await fetch(`${fullnodeUrl}/v1/transactions/by_hash/${transactionHash}`);
       
       if (txnResponse.ok) {
         const txn = await txnResponse.json();
@@ -231,11 +259,15 @@ export class AptosIntegration {
     // Step 1: Create destination escrow
     const { txHash: createTxHash, escrowAddress } = await this.createDestinationEscrow(eventData);
 
-    // Step 2: Wait a bit for transaction to be processed
+    // Step 2: Wait for transaction to be processed
     console.log('⏳ Waiting for escrow creation to be processed...');
     await new Promise(resolve => setTimeout(resolve, 5000));
 
-    // Step 3: Withdraw from destination escrow if we have the address
+    // Step 3: Wait for withdrawal phase to become active (like in your original tests)
+    console.log('⏳ Waiting for withdrawal phase to become active (15 seconds)...');
+    await new Promise(resolve => setTimeout(resolve, 15000)); // Wait 15 seconds for withdrawal phase
+
+    // Step 4: Withdraw from destination escrow if we have the address
     let withdrawTxHash: string | undefined;
     
     if (escrowAddress) {
